@@ -28,3 +28,8 @@ AI-assisted platform for simulating and analyzing quantum entanglement and delay
 - `data/`, `results/` - Organized for experiment logs and outputs
 
 ## 🧑‍💻 Quick start
+pip install -r requirements.txt
+python main.py
+
+## 💡 Vision
+To discover any statistical anomaly, retrocausal pattern, or evidence for future-information-access via AI-augmented quantum simulation!
