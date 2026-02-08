@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "quantum-retrocausality-ai: An Open-Source Computational Framework for Retrocausal Quantum Mechanics"
+authors:
+  - family-names: Huang
+    given-names: Akai
+    email: akaihuang@example.edu
+repository-code: "https://github.com/akaihuang/quantum-retrocausality-ai"
+license: MIT
+keywords:
+  - retrocausality
+  - two-state vector formalism
+  - weak values
+  - Bell inequality
+  - quantum eraser
+  - no-signaling theorem
+  - hidden variable models
+  - quantum foundations
+abstract: >-
+  The first open-source computational framework for exploring retrocausal
+  interpretations of quantum mechanics. Provides implementations of the
+  Two-State Vector Formalism (TSVF), weak value computation, the ABL rule,
+  retrocausal hidden variable models (Price-Wharton zigzag and
+  Wharton-Argaman boundary-value), a complete Kim et al. (2000) quantum
+  eraser simulation with no-signaling verification, and advanced experiments
+  including GHZ-Mermin nonlocality, decoherence thresholds, and the
+  Castagnoli speedup-retrocausality connection.

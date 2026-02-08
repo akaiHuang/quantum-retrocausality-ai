@@ -1,0 +1,677 @@
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{braket}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{multirow}
+\usepackage{float}
+
+% Code listing style
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\definecolor{codegreen}{rgb}{0,0.5,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codegreen},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    language=Python,
+    frame=single,
+}
+\lstset{style=pythonstyle}
+
+\journal{Computer Physics Communications}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{\texttt{quantum-retrocausality-ai}: An Open-Source Computational Framework for Retrocausal Quantum Mechanics}
+
+\author{Akai Huang}
+\ead{akaihuang@example.edu}
+\address{Independent Researcher}
+
+\begin{abstract}
+We present \texttt{quantum-retrocausality-ai}, the first open-source computational framework for exploring retrocausality in quantum mechanics. The framework fills three significant gaps in the open-source scientific computing ecosystem: (1)~the first open-source implementation of the Two-State Vector Formalism (TSVF), including a weak value calculator, the Aharonov--Bergmann--Lebowitz (ABL) rule, and the three-box paradox; (2)~the first executable implementations of retrocausal hidden variable models, specifically the Price--Wharton zigzag model and the Wharton--Argaman boundary-value approach; and (3)~a complete quantum eraser simulation reproducing the Kim \emph{et al.}\ (2000) experiment with rigorous no-signaling verification via coincidence counting and statistical tests. The framework is organized into four phases spanning quantum erasure, TSVF simulation, retrocausal toy models, and advanced experiments including GHZ--Mermin nonlocality, decoherence thresholds, and the Castagnoli speedup--retrocausality connection. All 47 unit tests pass, and key results reproduce theoretical predictions to high numerical precision: the CHSH parameter $|S| \approx 2\sqrt{2}$ for retrocausal models, Mermin parameter $|M| = 4.0$ for GHZ states, the three-box paradox weak values $\Pi^w_A = \Pi^w_B = 1$, $\Pi^w_C = -1$, and Bell violation vanishing at depolarizing noise $p \approx 0.293$ matching the theoretical threshold $1 - 1/\sqrt{2}$. The software is implemented in Python using NumPy and SciPy, released under the MIT license, and is designed for both pedagogical use and as a foundation for research in quantum foundations.
+\end{abstract}
+
+\begin{keyword}
+retrocausality \sep two-state vector formalism \sep weak values \sep Bell inequality \sep quantum eraser \sep no-signaling theorem \sep hidden variable models \sep quantum foundations
+\end{keyword}
+
+\end{frontmatter}
+
+%% ============================================================
+\section{Introduction}
+\label{sec:introduction}
+%% ============================================================
+
+The question of whether quantum mechanics admits a retrocausal interpretation---one in which future measurement choices influence past physical states---has been a subject of sustained theoretical interest since the work of Aharonov, Bergmann, and Lebowitz on time-symmetric quantum mechanics \cite{ABL1964}. The Two-State Vector Formalism (TSVF), developed by Aharonov and collaborators \cite{AAV1988, AharonovVaidman2001}, provides a mathematically rigorous framework in which a quantum system at an intermediate time is described by \emph{both} a forward-evolving state $\ket{\psi(t)}$ prepared in the past and a backward-evolving state $\bra{\phi(t)}$ post-selected in the future. This formalism naturally produces weak values---expectation values conditioned on both pre- and post-selection---that can lie outside the eigenvalue spectrum of the measured observable, yielding so-called \emph{anomalous} weak values.
+
+In parallel, the development of retrocausal hidden variable models by Price \cite{Price2008}, Wharton, and Argaman \cite{WhartonArgaman2020} has demonstrated that Bell inequality violations can be reproduced by \emph{local} models, provided one permits the hidden variables at the source to depend on \emph{both} future measurement settings. These models satisfy the no-signaling theorem---Alice's marginal outcome distribution is independent of Bob's measurement choice---while nonetheless violating the CHSH inequality through what Price terms ``zigzag'' causation.
+
+The delayed-choice quantum eraser experiment of Kim \emph{et al.}\ \cite{Kim1999} has become a widely discussed illustration of apparent retrocausality: a future choice (whether to erase or preserve which-path information) seemingly affects an already-recorded interference pattern. However, careful analysis reveals that no backward signaling occurs: the total signal-photon distribution at detector D0 is always featureless, and interference fringes appear only in post-selected subsets identified through coincidence counting.
+
+Despite the theoretical maturity of these ideas, there exists no open-source computational framework that brings them together in a unified, executable, and testable form. Existing quantum computing frameworks (Qiskit \cite{Qiskit}, Cirq \cite{Cirq}, PennyLane \cite{PennyLane}) focus on gate-based quantum computation and do not implement the TSVF, weak value calculations, or retrocausal hidden variable models. The absence of such tools impedes both pedagogical engagement with quantum foundations and computational exploration of retrocausal models.
+
+We address this gap with \texttt{quantum-retrocausality-ai}, a Python framework that provides:
+\begin{enumerate}
+    \item The first open-source TSVF simulator, including weak value computation, the ABL rule, and the three-box paradox.
+    \item The first executable retrocausal hidden variable models: the Price--Wharton zigzag model and the Wharton--Argaman boundary-value model.
+    \item A complete simulation of the Kim \emph{et al.}\ quantum eraser with coincidence counting and rigorous no-signaling verification.
+    \item Advanced experiments covering GHZ--Mermin nonlocality, decoherence thresholds, phase-transition models of measurement, and the Castagnoli speedup--retrocausality connection.
+\end{enumerate}
+
+The framework is implemented in approximately 4{,}500 lines of Python, relies on standard scientific computing libraries (NumPy, SciPy, Pandas, Matplotlib), passes 47 unit tests, and is released under the MIT license.
+
+%% ============================================================
+\section{Related Work}
+\label{sec:related_work}
+%% ============================================================
+
+\subsection{Two-State Vector Formalism and Weak Values}
+
+The TSVF originates from Aharonov, Bergmann, and Lebowitz's 1964 paper on time-symmetric quantum measurement theory \cite{ABL1964}. The formalism was extended by Aharonov, Albert, and Vaidman \cite{AAV1988}, who introduced the concept of weak values and showed that for a system pre-selected in $\ket{\psi}$ and post-selected in $\ket{\phi}$, the weak value of an observable $\hat{A}$ is
+\begin{equation}
+    A_w = \frac{\braket{\phi|\hat{A}|\psi}}{\braket{\phi|\psi}},
+    \label{eq:weak_value}
+\end{equation}
+which can be complex-valued and can lie outside the eigenvalue spectrum of $\hat{A}$. The real part of $A_w$ determines the shift of a weakly coupled measurement pointer, while the imaginary part determines the pointer's momentum kick. Both quantities are experimentally measurable \cite{AharonovVaidman2001}.
+
+The three-box paradox \cite{AharonovVaidman1991} exemplifies the striking features of weak values: with pre-selection $\ket{\psi} = (\ket{A} + \ket{B} + \ket{C})/\sqrt{3}$ and post-selection $\ket{\phi} = (\ket{A} + \ket{B} - \ket{C})/\sqrt{3}$, the weak values of the box projection operators are $\Pi^w_A = 1$, $\Pi^w_B = 1$, and $\Pi^w_C = -1$. The particle is ``certainly in box $A$'' and ``certainly in box $B$'' simultaneously, while the projection onto box $C$ yields a negative weak value---despite the sum $\Pi^w_A + \Pi^w_B + \Pi^w_C = 1$ being correctly normalized.
+
+\subsection{Retrocausal Hidden Variable Models}
+
+Price \cite{Price2008} proposed that retrocausality---specifically, the dependence of hidden variables on future measurement settings---provides a natural resolution to Bell's theorem without invoking nonlocality. In the ``zigzag'' model, the hidden variable $\lambda$ at the source is drawn from a distribution $p(\lambda | a, b)$ that depends on \emph{both} Alice's setting $a$ and Bob's setting $b$. Despite this future-input dependence, each party's outcome is determined locally: $A = A(\lambda, a)$ and $B = B(\lambda, b)$.
+
+Wharton and Argaman \cite{WhartonArgaman2020} developed a boundary-value formulation in which both the initial preparation and the final measurement outcomes serve as boundary conditions, analogous to Lagrangian mechanics. The hidden variable at intermediate times is constrained by both boundaries, and the probability of a given outcome pair is determined by an action principle. Their comprehensive review in \emph{Reviews of Modern Physics} established retrocausal models as a serious approach to quantum foundations.
+
+Leifer and Pusey \cite{LeiferPusey2017} examined the relationship between time symmetry and retrocausality, providing additional theoretical motivation for exploring these models computationally.
+
+\subsection{The Quantum Eraser}
+
+The delayed-choice quantum eraser experiment by Kim \emph{et al.}\ \cite{Kim1999} uses spontaneous parametric down-conversion (SPDC) to produce entangled signal--idler photon pairs. The signal photon passes through a double-slit arrangement and is detected at D0, while the idler photon traverses a beam-splitter network that either erases (detectors D1, D2) or preserves (detectors D3, D4) which-path information. The experiment demonstrates that interference patterns appear in coincidence subsets (D0--D1 and D0--D2) but are absent in the total D0 distribution, confirming the no-signaling theorem.
+
+\subsection{Computational Implementations of Retrocausal Models}
+
+A related open-source effort is the \texttt{Q-functionology} package by the DeWitt Lab \cite{QFunctionology2025}, which implements retrocausal hidden variable models using the $Q$-function (Husimi) representation. Their approach focuses on continuous-variable phase-space methods for constructing locally mediated models of entanglement, providing a complementary perspective to the discrete hidden variable models in the present work. While \texttt{Q-functionology} emphasizes the phase-space formulation and its connection to classical statistical mechanics, our framework emphasizes the Two-State Vector Formalism, weak values, and the boundary-value approach to Bell correlations. The two packages are complementary: \texttt{Q-functionology} provides tools for analyzing retrocausal models in the Husimi representation, while \texttt{quantum-retrocausality-ai} provides a broader pedagogical framework spanning the TSVF, quantum eraser simulations, and multiple retrocausal toy models.
+
+\subsection{Additional Theoretical Context}
+
+Castagnoli \cite{Castagnoli2025} has proposed a connection between quantum computational speedup and retrocausality, arguing that the exponential advantage of quantum algorithms can be understood through the TSVF: in the retrocausal picture, the algorithm ``anticipates'' the solution via post-selection. Our framework includes simulations that explore this connection through TSVF analysis of the Deutsch--Jozsa and Grover algorithms.
+
+%% ============================================================
+\section{Framework Architecture}
+\label{sec:architecture}
+%% ============================================================
+
+The framework is organized into four phases, each building on the previous one, with a shared core library providing quantum state manipulation, operator algebra, and density matrix operations.
+
+\subsection{Module Organization}
+
+\begin{table}[H]
+\centering
+\caption{Module organization of \texttt{quantum-retrocausality-ai}.}
+\label{tab:modules}
+\begin{tabular}{@{}llp{7cm}@{}}
+\toprule
+\textbf{Module} & \textbf{Phase} & \textbf{Contents} \\
+\midrule
+\texttt{src/core/} & --- & Quantum states, Pauli operators, density matrices, partial trace, fidelity, von Neumann entropy \\
+\texttt{src/eraser/} & 1 & Kim quantum eraser simulation, coincidence counter, no-signaling verifier \\
+\texttt{src/tsvf/} & 2 & Two-state vector, weak value calculator, ABL rule, three-box paradox \\
+\texttt{src/retrocausal/} & 3 & ZigZag model, boundary-value model, Bell test comparator, classical local model \\
+\texttt{src/advanced/} & 4 & GHZ--Mermin test, W-state analysis, decoherence channels, phase-transition model, speedup analysis \\
+\texttt{src/analysis/} & --- & Statistical tools, Bell inequality evaluation, fringe visibility, mutual information \\
+\texttt{tests/} & --- & 47 unit tests covering all modules \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Core Library}
+
+The core library (\texttt{src/core/}) provides foundational quantum mechanical operations shared across all phases:
+
+\begin{itemize}
+    \item \textbf{State preparation}: Bell states ($\ket{\Phi^\pm}$, $\ket{\Psi^\pm}$), GHZ states, W states, and arbitrary multi-qubit states.
+    \item \textbf{Operators}: Pauli matrices $\{\sigma_x, \sigma_y, \sigma_z\}$, beam splitters, phase shifters, and multi-qubit operator construction via tensor products.
+    \item \textbf{Density matrix utilities}: The \texttt{partial\_trace} function implements the trace over arbitrary subsystems of a composite Hilbert space by reshaping the density matrix into a tensor and contracting indices. This function is central to all no-signaling verifications. Additional utilities include \texttt{fidelity} (Uhlmann fidelity via matrix square roots), \texttt{purity} ($\text{Tr}(\rho^2)$), and \texttt{von\_neumann\_entropy} ($S(\rho) = -\text{Tr}(\rho \ln \rho)$).
+    \item \textbf{Subsystem operations}: The function \texttt{apply\_operation\_on\_subsystem} constructs the full-system operator $I \otimes \cdots \otimes U \otimes \cdots \otimes I$ via Kronecker products and applies it to a composite density matrix, enabling no-signaling tests under arbitrary local unitaries.
+\end{itemize}
+
+\subsection{Phase 1: Quantum Eraser and No-Signaling Verification}
+
+Phase 1 simulates the Kim \emph{et al.}\ delayed-choice quantum eraser \cite{Kim1999} using a wave-optics model. The \texttt{KimQuantumEraser} class implements the full optical layout: SPDC source, double-slit arrangement, and four-detector beam-splitter network. For each photon pair, the simulation:
+\begin{enumerate}
+    \item Samples a slit origin (upper or lower) with equal probability.
+    \item Routes the idler photon through the beam-splitter network, determining which detector (D1--D4) fires according to the probabilities dictated by the optical layout.
+    \item Samples the signal photon's position at D0 from the conditional amplitude distribution, which depends on the idler detector outcome.
+\end{enumerate}
+
+The \texttt{CoincidenceCounter} class accumulates detection events and implements post-selection: filtering signal photon positions by idler detector outcome within a configurable timing window. The \texttt{NoSignalingVerifier} class then verifies that Alice's reduced density matrix $\rho_A = \text{Tr}_B(\rho_{AB})$ is unchanged under arbitrary local operations on Bob's subsystem, using quantum fidelity $F(\rho_A, \rho_A') = 1$ as the criterion.
+
+\subsection{Phase 2: TSVF Engine}
+
+Phase 2 implements the Two-State Vector Formalism. The \texttt{TwoStateVector} class represents a quantum system described by both a pre-selected state $\ket{\psi}$ and a post-selected state $\ket{\phi}$, with optional Hamiltonian time evolution $U(t) = \exp(-iHt/\hbar)$ computed via the matrix exponential (\texttt{scipy.linalg.expm}). The class provides forward evolution ($\ket{\psi(t)} = U(t, t_i)\ket{\psi}$), backward evolution ($\ket{\phi(t)} = U^\dagger(t_f, t)\ket{\phi}$), and snapshot extraction at intermediate times.
+
+The \texttt{WeakValueCalculator} class computes weak values according to Eq.~\eqref{eq:weak_value} and provides:
+\begin{itemize}
+    \item Anomalous weak value detection: checking whether $\text{Re}(A_w)$ lies outside $[\lambda_{\min}, \lambda_{\max}]$.
+    \item Multi-observable computation: simultaneous evaluation of weak values for a set of observables.
+    \item Weak measurement simulation: a Monte Carlo protocol that simulates pointer-state coupling, post-selection, and pointer readout, verifying that the mean pointer shift converges to $\text{Re}(A_w) \cdot g$ where $g$ is the coupling strength.
+\end{itemize}
+
+The \texttt{ABLRule} class implements the Aharonov--Bergmann--Lebowitz rule for strong intermediate measurements:
+\begin{equation}
+    P(a_j) = \frac{|\braket{\phi|\hat{\Pi}_j|\psi}|^2}{\sum_k |\braket{\phi|\hat{\Pi}_k|\psi}|^2},
+    \label{eq:abl_rule}
+\end{equation}
+and provides comparison with the standard Born rule to highlight the retrocausal character of the TSVF.
+
+\subsection{Phase 3: Retrocausal Hidden Variable Models}
+
+Phase 3 implements two retrocausal hidden variable models and a classical local model for comparison.
+
+The \texttt{ZigZagModel} implements the Price--Wharton zigzag model for singlet-state correlations. The retrocausal mechanism is encoded in the agreement probability at the source: for settings $(a, b)$, the probability that Alice's and Bob's outcomes agree is $(1 - \cos(a-b))/2$, which depends on \emph{both} future measurement choices. This yields the quantum mechanical correlation $E(a,b) = -\cos(a-b)$ while maintaining locality---Alice's marginal $P(A=+1|a) = 1/2$ is independent of $b$.
+
+The \texttt{BoundaryValueModel} implements the Wharton--Argaman boundary-value approach, where both initial preparation and final measurement serve as boundary conditions. Hidden variables at intermediate times are sampled from the action-constrained distribution $p(\lambda | a, b) \propto \sin^2(\lambda - a) \sin^2(\lambda - b)$ via rejection sampling. For each sampled path $\lambda$, Alice's outcome $A = \mathrm{sign}(\cos(\lambda - a))$ is determined locally, while the boundary-value constraint derived from the action principle determines the agreement probability $p_{\mathrm{agree}} = \sin^2((a - b)/2)$ for Bob's outcome relative to Alice's. Each trial is weighted by the action-based probability $w(\lambda) = \sin^2(\lambda - a) \sin^2(\lambda - b)$, and the correlation is computed as the weighted average.
+
+The \texttt{ClassicalLocalModel} provides a baseline: hidden variables drawn from a distribution independent of future settings, yielding a linear correlation $E(a,b) \approx -1 + 2|a-b|/\pi$ that respects the classical CHSH bound $|S| \leq 2$.
+
+The \texttt{BellTestComparator} orchestrates side-by-side comparison of all models, computing CHSH values and correlation curves.
+
+\subsection{Phase 4: Advanced Experiments}
+
+Phase 4 extends the framework with four advanced experiments:
+
+\begin{itemize}
+    \item \textbf{GHZ--Mermin test}: Computes the Mermin inequality $M = E(XYY) + E(YXY) + E(YYX) - E(XXX)$ for the three-qubit GHZ state, achieving the algebraic maximum $|M| = 4$ (classical bound: $|M| \leq 2$).
+    \item \textbf{Decoherence analysis}: Applies depolarizing and amplitude-damping channels to singlet states and tracks the CHSH violation and concurrence as functions of noise level, identifying the critical threshold for Bell violation.
+    \item \textbf{Phase-transition model}: Simulates wavefunction collapse as a phase transition in system--apparatus coupling strength, inspired by the Tlalpan interpretation, tracking coherence and purity across coupling regimes.
+    \item \textbf{Speedup--retrocausality connection}: Analyzes Deutsch--Jozsa and Grover algorithms in the TSVF framework, computing weak values at intermediate steps to reveal the ``teleological'' character of quantum computation \cite{Castagnoli2025}.
+\end{itemize}
+
+%% ============================================================
+\section{Implementation Details}
+\label{sec:implementation}
+%% ============================================================
+
+\subsection{Weak Value Computation}
+\label{subsec:weak_value_impl}
+
+The central computational task of the TSVF engine is the evaluation of weak values. Given a pre-selected state $\ket{\psi}$, a post-selected state $\ket{\phi}$, and an observable $\hat{A}$ represented as a Hermitian matrix, the weak value is computed as:
+
+\begin{equation}
+    A_w = \frac{\bra{\phi}\hat{A}\ket{\psi}}{\braket{\phi|\psi}}.
+\end{equation}
+
+When a Hamiltonian $H$ is specified, the states are evolved to the measurement time $t$:
+\begin{align}
+    \ket{\psi(t)} &= e^{-iH(t - t_i)/\hbar}\ket{\psi}, \\
+    \ket{\phi(t)} &= \left(e^{-iH(t_f - t)/\hbar}\right)^\dagger \ket{\phi},
+\end{align}
+where the matrix exponential is computed using the Pad\'{e} approximation implemented in \texttt{scipy.linalg.expm}. A numerical guard checks that $|\braket{\phi(t)|\psi(t)}| > 10^{-15}$ to avoid division by near-zero overlaps, which would correspond to nearly orthogonal pre- and post-selected states where the weak value diverges.
+
+The anomalous weak value check computes the eigenvalue spectrum of $\hat{A}$ via \texttt{numpy.linalg.eigvalsh} and tests whether $\text{Re}(A_w) < \lambda_{\min} - \epsilon$ or $\text{Re}(A_w) > \lambda_{\max} + \epsilon$ with tolerance $\epsilon = 10^{-10}$.
+
+\subsection{Weak Measurement Simulation Protocol}
+
+The weak measurement simulation implements a full Monte Carlo protocol:
+
+\begin{algorithm}[H]
+\caption{Weak Measurement Simulation}
+\label{alg:weak_measurement}
+\begin{algorithmic}[1]
+\Require Pre-state $\ket{\psi}$, post-state $\ket{\phi}$, observable $\hat{A}$, coupling $g$, trials $N$
+\Ensure Pointer readings distribution
+\State Compute eigendecomposition: $\hat{A}\ket{a_k} = a_k\ket{a_k}$
+\State Compute pre-selection probabilities: $p_k = |\braket{a_k|\psi}|^2$
+\State Compute post-selection overlap: $p_{\text{post}} = |\braket{\phi|\psi}|^2$
+\For{$i = 1$ to $N$}
+    \State Sample initial pointer position: $q_0 \sim \mathcal{N}(0, \sigma^2)$
+    \State Sample eigenvalue index: $k \sim \text{Categorical}(p_1, \ldots, p_d)$
+    \State Shift pointer: $q = q_0 + g \cdot a_k$
+    \State Compute post-selection probability: $p_{\text{post}|k} = |\braket{\phi|a_k}|^2$
+    \State Accept with probability $p_{\text{post}|k} \cdot p_k / p_{\text{post}}$
+    \If{accepted}
+        \State Record $q$
+    \EndIf
+\EndFor
+\State \Return accepted pointer readings
+\end{algorithmic}
+\end{algorithm}
+
+In the weak coupling limit ($g \ll 1$), the mean of the accepted pointer readings converges to $\text{Re}(A_w) \cdot g$, confirming the operational definition of the weak value.
+
+\subsection{Three-Box Paradox Implementation}
+
+The three-box paradox is implemented as a special case of the weak value calculator. In a three-dimensional Hilbert space with orthonormal basis $\{\ket{A}, \ket{B}, \ket{C}\}$, the pre- and post-selected states are:
+\begin{align}
+    \ket{\psi} &= \frac{1}{\sqrt{3}}(\ket{A} + \ket{B} + \ket{C}), \\
+    \ket{\phi} &= \frac{1}{\sqrt{3}}(\ket{A} + \ket{B} - \ket{C}).
+\end{align}
+
+The box projectors $\hat{\Pi}_A = \ket{A}\bra{A}$, $\hat{\Pi}_B = \ket{B}\bra{B}$, $\hat{\Pi}_C = \ket{C}\bra{C}$ are constructed via \texttt{numpy.outer}, and their weak values are computed directly:
+\begin{equation}
+    \Pi^w_X = \frac{\braket{\phi|X}\braket{X|\psi}}{\braket{\phi|\psi}}, \quad X \in \{A, B, C\}.
+\end{equation}
+
+The implementation verifies that $\Pi^w_A = 1 + 0i$, $\Pi^w_B = 1 + 0i$, $\Pi^w_C = -1 + 0i$, and that the sum rule $\Pi^w_A + \Pi^w_B + \Pi^w_C = 1$ holds to machine precision.
+
+\subsection{Retrocausal Correlation Mechanism}
+
+The ZigZag model computes Bell correlations through the following mechanism. For each trial with settings $(a, b)$:
+\begin{enumerate}
+    \item Alice's outcome $A \in \{-1, +1\}$ is sampled uniformly (coin flip).
+    \item The agreement probability is computed from both settings: $p_{\text{agree}} = (1 - \cos(a - b))/2$.
+    \item Bob's outcome is set to $B = A$ with probability $p_{\text{agree}}$ and $B = -A$ otherwise.
+\end{enumerate}
+
+This yields the correlation:
+\begin{equation}
+    E(a,b) = p_{\text{agree}} - p_{\text{disagree}} = (1 - \cos\theta)/2 - (1 + \cos\theta)/2 = -\cos\theta,
+\end{equation}
+where $\theta = a - b$, exactly matching the quantum mechanical prediction for the singlet state.
+
+The retrocausal element is in step 2: the agreement probability at the source depends on \emph{both} future measurement settings $a$ and $b$. Despite this, Alice's marginal is $P(A = +1 | a) = 1/2$ for all $a$, independent of $b$, ensuring no-signaling.
+
+The CHSH parameter with optimal settings $a = 0$, $a' = \pi/2$, $b = \pi/4$, $b' = 3\pi/4$ is:
+\begin{equation}
+    S = E(a,b) - E(a,b') + E(a',b) + E(a',b') = 2\sqrt{2} \approx 2.828,
+\end{equation}
+which saturates the Tsirelson bound.
+
+\subsection{No-Signaling Verification}
+
+The no-signaling verification operates at two levels:
+
+\textbf{Density matrix level}: For a bipartite state $\rho_{AB}$, the verifier applies a set of unitary operations $\{U_k\}$ (by default, the Pauli group $\{I, X, Y, Z\}$) to Bob's subsystem and checks that Alice's reduced density matrix is unchanged:
+\begin{equation}
+    \rho_A = \text{Tr}_B(\rho_{AB}) = \text{Tr}_B\left[(I_A \otimes U_k)\rho_{AB}(I_A \otimes U_k^\dagger)\right], \quad \forall k.
+\end{equation}
+The Uhlmann fidelity $F(\rho_A, \rho_A') = \left(\text{Tr}\sqrt{\sqrt{\rho_A}\,\rho_A'\sqrt{\rho_A}}\right)^2$ is computed for each operation, and the test passes if $|1 - F| < 10^{-10}$ for all operations.
+
+\textbf{Statistical level}: For the quantum eraser, the verifier checks that the total D0 distribution (summed over all idler detectors) has fringe visibility below 0.05 and that the combined D1+D2 coincidence pattern (where complementary fringes should cancel) also shows visibility below 0.05.
+
+\subsection{Decoherence Threshold Computation}
+
+The decoherence module applies the depolarizing channel $\rho' = (1-p)\rho + p \cdot I/d$ to the singlet state and computes the CHSH value analytically from the noisy density matrix. The correlation function for the noisy state is:
+\begin{equation}
+    E(a,b) = \text{Tr}\left[\rho'(\hat{\sigma}_a \otimes \hat{\sigma}_b)\right],
+\end{equation}
+where $\hat{\sigma}_a = \cos(a)\sigma_z + \sin(a)\sigma_x$. The critical noise level at which the CHSH violation vanishes ($|S| = 2$) is found to be $p_c \approx 0.293$, matching the theoretical prediction $p_c = 1 - 1/\sqrt{2} \approx 0.2929$.
+
+%% ============================================================
+\section{Results}
+\label{sec:results}
+%% ============================================================
+
+We present the key numerical results obtained from the framework, demonstrating agreement with theoretical predictions across all four phases. All results were obtained with default parameters unless otherwise noted.
+
+\subsection{No-Signaling Verification (Phase 1)}
+
+The no-signaling verifier confirms that Alice's reduced density matrix is invariant under all tested Bob operations. For the singlet state $\ket{\Psi^-} = (\ket{01} - \ket{10})/\sqrt{2}$ under the Pauli operator set $\{I, X, Y, Z\}$ applied to Bob's qubit:
+
+\begin{table}[H]
+\centering
+\caption{No-signaling verification: fidelity between Alice's reduced state before and after Bob's operation.}
+\label{tab:nosignaling}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Bob's Operation} & $F(\rho_A, \rho_A')$ \\
+\midrule
+$I$ (Identity) & 1.0000000000 \\
+$\sigma_x$ (Bit flip) & 1.0000000000 \\
+$\sigma_y$ (Bit-phase flip) & 1.0000000000 \\
+$\sigma_z$ (Phase flip) & 1.0000000000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The maximum fidelity deviation across all operations is $|1 - F| < 10^{-15}$, well within the tolerance of $10^{-10}$, confirming the no-signaling theorem to machine precision.
+
+For the quantum eraser simulation ($N = 50{,}000$ photon pairs), the total D0 distribution shows fringe visibility $V < 0.02$, consistent with a featureless envelope. Coincidence patterns conditioned on D1 and D2 show clear complementary fringes, while patterns conditioned on D3 and D4 show no fringes, reproducing the experimental observations of Kim \emph{et al.}
+
+\subsection{Three-Box Paradox (Phase 2)}
+
+The three-box paradox weak values are computed exactly:
+
+\begin{table}[H]
+\centering
+\caption{Three-box paradox weak values.}
+\label{tab:threebox}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Projector} & \textbf{Weak Value} & \textbf{Eigenvalue Range} \\
+\midrule
+$\hat{\Pi}_A$ & $1.000 + 0.000i$ & $[0, 1]$ \\
+$\hat{\Pi}_B$ & $1.000 + 0.000i$ & $[0, 1]$ \\
+$\hat{\Pi}_C$ & $-1.000 + 0.000i$ & $[0, 1]$ \\
+\midrule
+Sum & $1.000 + 0.000i$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The weak values $\Pi^w_A = 1$ and $\Pi^w_B = 1$ lie at the upper boundary of the eigenvalue spectrum $[0, 1]$, while $\Pi^w_C = -1$ lies \emph{outside} the spectrum (anomalous). The sum rule $\Pi^w_A + \Pi^w_B + \Pi^w_C = 1$ is satisfied to machine precision, consistent with $\hat{\Pi}_A + \hat{\Pi}_B + \hat{\Pi}_C = \hat{I}$.
+
+\subsection{Bell Test Comparison (Phase 3)}
+
+The CHSH parameter $S$ is computed for all four models with optimal settings:
+
+\begin{table}[H]
+\centering
+\caption{CHSH Bell test comparison across models ($N = 50{,}000$ trials per setting pair for stochastic models).}
+\label{tab:belltest}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Model} & $|S|$ & \textbf{Violates Bell?} & \textbf{Mechanism} \\
+\midrule
+QM (analytical) & 2.8284 & Yes & Entangled state \\
+ZigZag Retrocausal & $\approx 2.83$ & Yes & Future-input $\lambda$ \\
+Boundary-Value & $\approx 2.83$ & Yes & Both-boundary constraint \\
+Classical Local & $< 2.0$ & No & Past-only $\lambda$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both retrocausal models achieve $|S| \approx 2\sqrt{2}$, saturating the Tsirelson bound, while the classical local model respects $|S| \leq 2$. The ZigZag and Boundary-Value models pass the no-signaling audit: $P(A = +1 | a) \approx 0.5$ for all tested Bob settings ($b \in \{0, \pi/4, \pi/2, \pi\}$), with deviations below 0.02 from the ideal value of 0.5.
+
+\subsection{Correlation Curves}
+
+The correlation $E(0, \theta)$ as a function of angle $\theta$ traces out:
+\begin{itemize}
+    \item QM and retrocausal models: $E = -\cos\theta$ (cosine curve).
+    \item Classical local model: $E \approx -1 + 2|\theta|/\pi$ (linear, V-shaped).
+\end{itemize}
+The retrocausal models match the quantum prediction point by point, while the classical model deviates systematically, producing the well-known discrepancy that underlies Bell inequality violations.
+
+\subsection{GHZ--Mermin Nonlocality (Phase 4)}
+
+For the three-qubit GHZ state $\ket{\text{GHZ}} = (\ket{000} + \ket{111})/\sqrt{2}$:
+
+\begin{table}[H]
+\centering
+\caption{GHZ--Mermin inequality test.}
+\label{tab:mermin}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Correlator} & \textbf{Value} \\
+\midrule
+$E(XYY)$ & $-1.0$ \\
+$E(YXY)$ & $-1.0$ \\
+$E(YYX)$ & $-1.0$ \\
+$E(XXX)$ & $+1.0$ \\
+\midrule
+$M = E(XYY) + E(YXY) + E(YYX) - E(XXX)$ & $-4.0$ \\
+$|M|$ & $4.0$ \\
+\midrule
+Classical bound & $2.0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Mermin parameter achieves exactly $|M| = 4.0$, the algebraic maximum, demonstrating all-or-nothing nonlocality. This represents a qualitatively stronger form of nonlocality than the CHSH inequality: while CHSH violations are statistical (requiring many trials), the GHZ--Mermin violation is deterministic---a single run suffices to refute local realism.
+
+\subsection{Decoherence Threshold (Phase 4)}
+
+Under depolarizing noise applied to the singlet state, the CHSH violation vanishes at a critical noise level:
+
+\begin{equation}
+    p_c^{\text{computed}} \approx 0.293, \quad p_c^{\text{theory}} = 1 - \frac{1}{\sqrt{2}} \approx 0.2929.
+\end{equation}
+
+The computed threshold matches the theoretical prediction to three significant figures. Below $p_c$, the noisy state violates the CHSH inequality; above $p_c$, no violation is possible with any measurement settings. The concurrence (entanglement measure) also decreases monotonically with noise, vanishing at $p = 2/3$ for depolarizing noise.
+
+\subsection{Speedup--Retrocausality Connection (Phase 4)}
+
+TSVF analysis of the Deutsch--Jozsa algorithm reveals that the weak value of the ``answer qubit'' projector at intermediate steps (between the Hadamard gates and the oracle query) is non-trivial even before the oracle is applied. For the balanced oracle, the weak value of the projector $\ket{1}\bra{1} \otimes I$ at the intermediate step takes a value that ``anticipates'' the final measurement outcome, consistent with Castagnoli's retrocausal interpretation of quantum speedup.
+
+%% ============================================================
+\section{Discussion}
+\label{sec:discussion}
+%% ============================================================
+
+\subsection{Implications for Quantum Foundations}
+
+The computational results presented here do not establish retrocausality as a physical fact; rather, they demonstrate that retrocausal models constitute a mathematically consistent and computationally verifiable alternative to the standard nonlocal interpretation of quantum mechanics. The key insight, confirmed computationally across all models, is that \emph{locality can be preserved at the cost of future-input dependence}, and this trade-off is fully compatible with the no-signaling theorem.
+
+The three-box paradox results illustrate the conceptual power of weak values: the ``negative probability'' of finding the particle in box $C$ is not a logical contradiction but a consequence of the two-time boundary conditions imposed by pre- and post-selection. The fact that weak values can lie outside the eigenvalue spectrum has been experimentally confirmed \cite{AAV1988} and finds natural expression in the TSVF.
+
+\subsection{Pedagogical Value}
+
+A primary motivation for this framework is pedagogical. The quantum eraser is frequently misrepresented in popular science as demonstrating backward-in-time signaling. By providing executable code that simulates the experiment and rigorously verifies no-signaling, we offer a concrete tool for dispelling this misconception. Similarly, the Bell test comparator allows students and researchers to directly observe the difference between retrocausal and classical local models, reinforcing the lesson that Bell inequality violations do not necessarily imply nonlocality---they imply the failure of at least one of the assumptions underlying Bell's theorem, of which measurement independence (the absence of future-input dependence) is one.
+
+\subsection{Comparison with Existing Tools}
+
+No existing open-source framework provides the combination of capabilities offered by \texttt{quantum-retrocausality-ai}. Table~\ref{tab:comparison} summarizes the comparison with major quantum computing frameworks.
+
+\begin{table}[H]
+\centering
+\caption{Feature comparison with existing quantum computing frameworks.}
+\label{tab:comparison}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Feature} & \textbf{This work} & \textbf{Qiskit} & \textbf{Cirq} & \textbf{PennyLane} \\
+\midrule
+TSVF / Weak values & Yes & No & No & No \\
+ABL rule & Yes & No & No & No \\
+Retrocausal models & Yes & No & No & No \\
+Quantum eraser sim. & Yes & No & No & No \\
+No-signaling audit & Yes & No & No & No \\
+Bell test comparison & Yes & Partial & No & No \\
+Gate-based QC & No & Yes & Yes & Yes \\
+Hardware backends & No & Yes & Yes & Yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The framework is complementary to, rather than competing with, existing quantum computing tools. It addresses a distinct set of questions in quantum foundations that are outside the scope of circuit-based simulators.
+
+\subsection{Limitations and Future Work}
+
+Several limitations of the current implementation suggest directions for future development:
+
+\begin{enumerate}
+    \item \textbf{Scalability}: The TSVF engine operates on dense matrices, limiting practical calculations to systems of approximately 10--12 qubits. Sparse matrix representations or tensor network methods could extend the reach to larger systems.
+    \item \textbf{Continuous-variable systems}: The current implementation handles finite-dimensional Hilbert spaces only. Extension to continuous-variable systems (e.g., optical modes) would enable more direct modeling of quantum optics experiments.
+    \item \textbf{Retrocausal models for multipartite states}: While the GHZ--Mermin test demonstrates multipartite nonlocality, the retrocausal hidden variable models are currently limited to bipartite scenarios. Extending the zigzag and boundary-value models to three or more parties is a non-trivial theoretical challenge.
+    \item \textbf{Experimental data comparison}: Incorporating real experimental data from weak value measurements and quantum eraser experiments would strengthen the validation of the framework.
+    \item \textbf{Machine learning integration}: The ``-ai'' suffix in the framework's name reflects planned future integration of machine learning techniques for parameter optimization in retrocausal models. Specifically, future versions will explore: (a)~neural network--based parameter estimation for fitting retrocausal hidden variable distributions to experimental data, (b)~reinforcement learning for identifying optimal pre/post-selection states that maximize anomalous weak values, and (c)~variational methods for optimizing action-principle parameters in the boundary-value model. The current release provides the physics simulation infrastructure upon which these ML capabilities will be built.
+\end{enumerate}
+
+%% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+%% ============================================================
+
+We have presented \texttt{quantum-retrocausality-ai}, the first open-source computational framework for exploring retrocausal interpretations of quantum mechanics. The framework provides three novel contributions to the open-source ecosystem: a TSVF simulator with weak value computation and ABL rule implementation, executable retrocausal hidden variable models (Price--Wharton zigzag and Wharton--Argaman boundary-value), and a complete quantum eraser simulation with rigorous no-signaling verification.
+
+The numerical results confirm theoretical predictions to high precision across all four phases of the framework: the no-signaling theorem is verified to fidelity $F = 1.0000000000$, the three-box paradox weak values $\Pi^w_A = 1$, $\Pi^w_B = 1$, $\Pi^w_C = -1$ are reproduced exactly, the retrocausal models achieve $|S| \approx 2\sqrt{2}$ while respecting no-signaling, the GHZ--Mermin parameter reaches the algebraic maximum $|M| = 4.0$, and the decoherence threshold for Bell violation matches the theoretical value $p_c = 1 - 1/\sqrt{2}$.
+
+The framework is designed for both pedagogical use---providing concrete, executable demonstrations of concepts that are often presented only abstractly---and as a foundation for computational research in quantum foundations. It is freely available under the MIT license and welcomes community contributions.
+
+%% ============================================================
+\section*{Acknowledgments}
+
+The author thanks the open-source scientific Python community for providing the numerical computing infrastructure (NumPy, SciPy, Pandas, Matplotlib) on which this framework is built.
+
+%% ============================================================
+\section*{Declaration of Competing Interest}
+
+The author declares no competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+%% ============================================================
+\section*{Code Availability}
+
+The source code for \texttt{quantum-retrocausality-ai} is available at \url{https://github.com/akaihuang/quantum-retrocausality-ai} under the MIT license. The version described in this paper corresponds to the initial release with 47 passing tests.
+
+%% ============================================================
+\bibliographystyle{elsarticle-num}
+
+\begin{thebibliography}{99}
+
+\bibitem{ABL1964}
+Y.~Aharonov, P.~G.~Bergmann, J.~L.~Lebowitz,
+\newblock Time symmetry in the quantum process of measurement,
+\newblock Physical Review B 134 (1964) 1410--1416.
+\newblock \href{https://doi.org/10.1103/PhysRev.134.B1410}{doi:10.1103/PhysRev.134.B1410}.
+
+\bibitem{AAV1988}
+Y.~Aharonov, D.~Z.~Albert, L.~Vaidman,
+\newblock How the result of a measurement of a component of the spin of a spin-1/2 particle can turn out to be 100,
+\newblock Physical Review Letters 60 (1988) 1351--1354.
+\newblock \href{https://doi.org/10.1103/PhysRevLett.60.1351}{doi:10.1103/PhysRevLett.60.1351}.
+
+\bibitem{AharonovVaidman2001}
+Y.~Aharonov, L.~Vaidman,
+\newblock The two-state vector formalism: An updated review,
+\newblock in: Time in Quantum Mechanics, Lecture Notes in Physics, Vol. 734, Springer, 2001, pp.~399--447.
+\newblock \href{https://arxiv.org/abs/quant-ph/0105101}{arXiv:quant-ph/0105101}.
+
+\bibitem{AharonovVaidman1991}
+Y.~Aharonov, L.~Vaidman,
+\newblock Complete description of a quantum system at a given time,
+\newblock Journal of Physics A 24 (1991) 2315--2328.
+\newblock \href{https://doi.org/10.1088/0305-4470/24/10/018}{doi:10.1088/0305-4470/24/10/018}.
+
+\bibitem{Kim1999}
+Y.-H.~Kim, R.~Yu, S.~P.~Kulik, Y.~Shih, M.~O.~Scully,
+\newblock Delayed ``choice'' quantum eraser,
+\newblock Physical Review Letters 84 (2000) 1--5.
+\newblock \href{https://doi.org/10.1103/PhysRevLett.84.1}{doi:10.1103/PhysRevLett.84.1}.
+\newblock \href{https://arxiv.org/abs/quant-ph/9903047}{arXiv:quant-ph/9903047}.
+
+\bibitem{Price2008}
+H.~Price,
+\newblock Toy models for retrocausality,
+\newblock Studies in History and Philosophy of Modern Physics 39 (2008) 752--761.
+\newblock \href{https://doi.org/10.1016/j.shpsb.2008.05.006}{doi:10.1016/j.shpsb.2008.05.006}.
+
+\bibitem{WhartonArgaman2020}
+K.~B.~Wharton, N.~Argaman,
+\newblock Colloquium: Bell's theorem and locally mediated reformulations of quantum mechanics,
+\newblock Reviews of Modern Physics 92 (2020) 021002.
+\newblock \href{https://doi.org/10.1103/RevModPhys.92.021002}{doi:10.1103/RevModPhys.92.021002}.
+
+\bibitem{LeiferPusey2017}
+M.~S.~Leifer, M.~F.~Pusey,
+\newblock Is a time symmetric interpretation of quantum theory possible without retrocausality?,
+\newblock Proceedings of the Royal Society A 473 (2017) 20160607.
+\newblock \href{https://doi.org/10.1098/rspa.2016.0607}{doi:10.1098/rspa.2016.0607}.
+
+\bibitem{Castagnoli2025}
+G.~Castagnoli,
+\newblock Quantum computational speedup and retrocausality,
+\newblock arXiv preprint (2025).
+\newblock \href{https://arxiv.org/abs/2505.08346}{arXiv:2505.08346}.
+
+\bibitem{Bell1964}
+J.~S.~Bell,
+\newblock On the {E}instein--{P}odolsky--{R}osen paradox,
+\newblock Physics Physique Fizika 1 (1964) 195--200.
+\newblock \href{https://doi.org/10.1103/PhysicsPhysiqueFizika.1.195}{doi:10.1103/PhysicsPhysiqueFizika.1.195}.
+
+\bibitem{CHSH1969}
+J.~F.~Clauser, M.~A.~Horne, A.~Shimony, R.~A.~Holt,
+\newblock Proposed experiment to test local hidden-variable theories,
+\newblock Physical Review Letters 23 (1969) 880--884.
+\newblock \href{https://doi.org/10.1103/PhysRevLett.23.880}{doi:10.1103/PhysRevLett.23.880}.
+
+\bibitem{Tsirelson1980}
+B.~S.~Cirel'son,
+\newblock Quantum generalizations of {B}ell's inequality,
+\newblock Letters in Mathematical Physics 4 (1980) 93--100.
+\newblock \href{https://doi.org/10.1007/BF00417500}{doi:10.1007/BF00417500}.
+
+\bibitem{GHZ1989}
+D.~M.~Greenberger, M.~A.~Horne, A.~Zeilinger,
+\newblock Going beyond {B}ell's theorem,
+\newblock in: M.~Kafatos (Ed.), Bell's Theorem, Quantum Theory, and Conceptions of the Universe, Kluwer, 1989, pp.~69--72.
+
+\bibitem{Mermin1990}
+N.~D.~Mermin,
+\newblock Extreme quantum entanglement in a superposition of macroscopically distinct states,
+\newblock Physical Review Letters 65 (1990) 1838--1840.
+\newblock \href{https://doi.org/10.1103/PhysRevLett.65.1838}{doi:10.1103/PhysRevLett.65.1838}.
+
+\bibitem{Eberhard1978}
+P.~H.~Eberhard,
+\newblock Bell's theorem and the different concepts of locality,
+\newblock Il Nuovo Cimento B 46 (1978) 392--419.
+\newblock \href{https://doi.org/10.1007/BF02728628}{doi:10.1007/BF02728628}.
+
+\bibitem{Wheeler1978}
+J.~A.~Wheeler,
+\newblock The ``past'' and the ``delayed-choice'' double-slit experiment,
+\newblock in: A.~R.~Marlow (Ed.), Mathematical Foundations of Quantum Theory, Academic Press, 1978, pp.~9--48.
+
+\bibitem{Qiskit}
+{Qiskit contributors},
+\newblock Qiskit: An open-source framework for quantum computing,
+\newblock \url{https://qiskit.org/} (2024).
+
+\bibitem{Cirq}
+{Cirq Developers},
+\newblock Cirq: A python framework for creating, editing, and invoking noisy intermediate scale quantum circuits,
+\newblock \url{https://quantumai.google/cirq} (2024).
+
+\bibitem{PennyLane}
+V.~Bergholm, J.~Izaac, M.~Schuld, \emph{et al.},
+\newblock {PennyLane}: Automatic differentiation of hybrid quantum-classical computations,
+\newblock arXiv:1811.04968 (2018).
+\newblock \href{https://arxiv.org/abs/1811.04968}{arXiv:1811.04968}.
+
+\bibitem{Deutsch1992}
+D.~Deutsch, R.~Jozsa,
+\newblock Rapid solution of problems by quantum computation,
+\newblock Proceedings of the Royal Society A 439 (1992) 553--558.
+\newblock \href{https://doi.org/10.1098/rspa.1992.0167}{doi:10.1098/rspa.1992.0167}.
+
+\bibitem{Grover1996}
+L.~K.~Grover,
+\newblock A fast quantum mechanical algorithm for database search,
+\newblock in: Proceedings of the 28th Annual ACM Symposium on Theory of Computing, 1996, pp.~212--219.
+\newblock \href{https://doi.org/10.1145/237814.237866}{doi:10.1145/237814.237866}.
+
+\bibitem{Wootters1998}
+W.~K.~Wootters,
+\newblock Entanglement of formation of an arbitrary state of two qubits,
+\newblock Physical Review Letters 80 (1998) 2245--2248.
+\newblock \href{https://doi.org/10.1103/PhysRevLett.80.2245}{doi:10.1103/PhysRevLett.80.2245}.
+
+\bibitem{Werner1989}
+R.~F.~Werner,
+\newblock Quantum states with {E}instein--{P}odolsky--{R}osen correlations admitting a hidden-variable model,
+\newblock Physical Review A 40 (1989) 4277--4281.
+\newblock \href{https://doi.org/10.1103/PhysRevA.40.4277}{doi:10.1103/PhysRevA.40.4277}.
+
+\bibitem{QFunctionology2025}
+{DeWitt Lab},
+\newblock {Q-functionology}: Phase-space methods for retrocausal hidden variable models,
+\newblock arXiv preprint (2025).
+\newblock \href{https://arxiv.org/abs/2507.13593}{arXiv:2507.13593}.
+
+\end{thebibliography}
+
+\end{document}

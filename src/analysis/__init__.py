@@ -1,0 +1,2 @@
+from .statistics import chi_squared_uniformity, fringe_visibility, mutual_information
+from .statistics import correlation_coefficient, bootstrap_confidence_interval

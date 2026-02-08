@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravitational Light Simulator &mdash; Variable Speed of Light</title>
+    <style>
+        /* ============================================ */
+        /* Reset & Base                                 */
+        /* ============================================ */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a14;
+            --bg-secondary: #0f0f1e;
+            --bg-panel: #12122a;
+            --bg-card: #181838;
+            --bg-hover: #1e1e42;
+            --text-primary: #e8e8f0;
+            --text-secondary: #9999bb;
+            --text-muted: #666688;
+            --accent-blue: #4488ff;
+            --accent-cyan: #44ccee;
+            --accent-orange: #ff8844;
+            --accent-red: #ff4444;
+            --accent-green: #44dd88;
+            --border-color: #2a2a4a;
+            --glow-blue: rgba(68, 136, 255, 0.3);
+            --glow-orange: rgba(255, 136, 68, 0.3);
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        /* ============================================ */
+        /* Layout                                       */
+        /* ============================================ */
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        #viewport {
+            flex: 3;
+            position: relative;
+            background: #020208;
+            min-width: 0;
+        }
+
+        #viewport canvas {
+            display: block;
+        }
+
+        .control-panel {
+            flex: 0 0 340px;
+            max-width: 380px;
+            min-width: 280px;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ============================================ */
+        /* Panel Header                                 */
+        /* ============================================ */
+        .panel-header {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-header h1 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .panel-header .subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+        }
+
+        /* ============================================ */
+        /* Section Styling                              */
+        /* ============================================ */
+        .section {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* ============================================ */
+        /* Sliders                                      */
+        /* ============================================ */
+        .slider-group {
+            margin-bottom: 14px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .slider-label span:first-child {
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .slider-label .slider-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-secondary);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            border: 2px solid var(--bg-panel);
+            box-shadow: 0 0 8px var(--glow-blue);
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            border: 2px solid var(--bg-panel);
+            box-shadow: 0 0 8px var(--glow-blue);
+            cursor: pointer;
+        }
+
+        /* ============================================ */
+        /* Buttons                                      */
+        /* ============================================ */
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2244aa, #3366cc);
+            border-color: var(--accent-blue);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #3355bb, #4477dd);
+            box-shadow: 0 0 15px var(--glow-blue);
+        }
+
+        .btn-danger {
+            border-color: #442222;
+        }
+
+        .btn-danger:hover {
+            background: #331111;
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        /* ============================================ */
+        /* Checkboxes                                   */
+        /* ============================================ */
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-item input[type="checkbox"]:checked {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .checkbox-item input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 1px;
+            width: 6px;
+            height: 10px;
+            border: solid #fff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .checkbox-item label {
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* ============================================ */
+        /* Presets                                      */
+        /* ============================================ */
+        .preset-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-preset {
+            flex: 1;
+            padding: 8px 6px;
+            font-size: 11px;
+            border-radius: 5px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .btn-preset:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-orange);
+            color: var(--text-primary);
+        }
+
+        .btn-preset .preset-icon {
+            font-size: 18px;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        /* ============================================ */
+        /* Info Display                                 */
+        /* ============================================ */
+        .info-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .info-card .computed-values {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 12px;
+            font-size: 12px;
+        }
+
+        .computed-values .cv-label {
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .computed-values .cv-value {
+            color: var(--accent-cyan);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 11px;
+            text-align: right;
+        }
+
+        #ray-info {
+            font-size: 12px;
+            line-height: 1.6;
+            min-height: 40px;
+        }
+
+        #ray-info em {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .info-value {
+            color: var(--accent-cyan);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 11px;
+        }
+
+        .info-captured {
+            background: rgba(255, 50, 50, 0.15);
+            border: 1px solid rgba(255, 50, 50, 0.4);
+            border-radius: 4px;
+            padding: 6px 10px;
+            color: var(--accent-red);
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        /* ============================================ */
+        /* Cursor Info Bar                              */
+        /* ============================================ */
+        .cursor-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            min-height: 28px;
+            line-height: 1.5;
+        }
+
+        /* ============================================ */
+        /* Explanation Text                             */
+        /* ============================================ */
+        .explanation {
+            padding: 14px 20px;
+            flex-grow: 1;
+        }
+
+        .explanation p {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 8px;
+        }
+
+        .explanation strong {
+            color: var(--text-secondary);
+        }
+
+        .explanation .eq {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: var(--accent-cyan);
+            font-size: 11px;
+            background: var(--bg-secondary);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        /* ============================================ */
+        /* Shortcuts hint                               */
+        /* ============================================ */
+        .shortcuts {
+            padding: 10px 20px;
+            border-top: 1px solid var(--border-color);
+            font-size: 10.5px;
+            color: var(--text-muted);
+        }
+
+        .shortcuts kbd {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================ */
+        /* Viewport overlay elements                    */
+        /* ============================================ */
+        .viewport-overlay {
+            position: absolute;
+            top: 12px;
+            left: 16px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .viewport-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+            margin-bottom: 4px;
+        }
+
+        .viewport-subtitle {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .color-legend {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-bar {
+            width: 160px;
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(to right,
+                #000000, #cc2200, #ff8800, #ffcc00, #44ccaa, #4488ff, #3366cc);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .legend-label {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* ============================================ */
+        /* Scrollbar Styling                            */
+        /* ============================================ */
+        .control-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .control-panel::-webkit-scrollbar-track {
+            background: var(--bg-panel);
+        }
+
+        .control-panel::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .control-panel::-webkit-scrollbar-thumb:hover {
+            background: #3a3a5a;
+        }
+
+        /* ============================================ */
+        /* Responsive                                   */
+        /* ============================================ */
+        @media (max-width: 900px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            #viewport {
+                flex: 1;
+                min-height: 50vh;
+            }
+
+            .control-panel {
+                flex: 0 0 auto;
+                max-width: 100%;
+                max-height: 50vh;
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 3D Viewport -->
+        <div id="viewport">
+            <div class="viewport-overlay">
+                <div class="viewport-title">Schwarzschild Spacetime</div>
+                <div class="viewport-subtitle">Hover over the field to inspect c_eff. Orbit with mouse.</div>
+            </div>
+            <div class="color-legend" id="color-legend">
+                <span class="legend-label">c_eff = 0</span>
+                <div class="legend-bar"></div>
+                <span class="legend-label">c_eff = c</span>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <!-- Header -->
+            <div class="panel-header">
+                <h1>Gravitational Light Simulator</h1>
+                <div class="subtitle">Variable Speed of Light &mdash; Schwarzschild Metric</div>
+            </div>
+
+            <!-- Mass Control -->
+            <div class="section">
+                <div class="section-title">Mass</div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Mass (M<sub>&#9737;</sub>)</span>
+                        <span class="slider-value" id="mass-value">10.00</span>
+                    </div>
+                    <input type="range" id="mass-slider" min="0" max="100" value="66.7" step="0.1">
+                </div>
+            </div>
+
+            <!-- Presets -->
+            <div class="section">
+                <div class="section-title">Presets</div>
+                <div class="preset-row">
+                    <button class="btn-preset" id="preset-sun">
+                        <span class="preset-icon">&#9728;</span>
+                        Sun
+                    </button>
+                    <button class="btn-preset" id="preset-neutron">
+                        <span class="preset-icon">&#10041;</span>
+                        Neutron Star
+                    </button>
+                    <button class="btn-preset" id="preset-bh">
+                        <span class="preset-icon">&#9679;</span>
+                        Black Hole<br>(10 M&#9737;)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Light Ray Controls -->
+            <div class="section">
+                <div class="section-title">Light Ray</div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Impact parameter (r<sub>s</sub>)</span>
+                        <span class="slider-value" id="impact-value">5.0</span>
+                    </div>
+                    <input type="range" id="impact-slider" min="1.5" max="100" value="5" step="0.1">
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="btn-fire">Fire Light Ray</button>
+                    <button class="btn btn-danger" id="btn-clear">Clear Rays</button>
+                </div>
+            </div>
+
+            <!-- Toggles -->
+            <div class="section">
+                <div class="section-title">Display</div>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="chk-heatmap" checked>
+                        <label for="chk-heatmap">Speed heatmap (c_eff / c)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="chk-photon-sphere" checked>
+                        <label for="chk-photon-sphere">Photon sphere (1.5 r_s)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="chk-event-horizon" checked>
+                        <label for="chk-event-horizon">Event horizon (r_s)</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Computed Values -->
+            <div class="section">
+                <div class="section-title">Computed Values</div>
+                <div class="info-card">
+                    <div class="computed-values">
+                        <span class="cv-label">Schwarzschild r:</span>
+                        <span class="cv-value" id="rs-display">---</span>
+                        <span class="cv-label">Photon sphere r:</span>
+                        <span class="cv-value" id="rps-display">---</span>
+                        <span class="cv-label">Weak-field deflection:</span>
+                        <span class="cv-value" id="defl-display">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cursor Info -->
+            <div class="section">
+                <div class="section-title">Cursor Position</div>
+                <div class="cursor-bar" id="cursor-info">
+                    Hover over the viewport to inspect spacetime
+                </div>
+            </div>
+
+            <!-- Ray Results -->
+            <div class="section">
+                <div class="section-title">Ray Trace Results</div>
+                <div class="info-card" id="ray-info">
+                    <em>Fire a ray to see results</em>
+                </div>
+            </div>
+
+            <!-- Explanation -->
+            <div class="explanation">
+                <p>
+                    <strong>How it works:</strong> In the Schwarzschild metric, the coordinate speed of light
+                    varies with distance from a massive body. The effective refractive index is
+                    <span class="eq">n(r) = 1/(1 - r_s/r)</span>, meaning light slows down near the mass.
+                </p>
+                <p>
+                    Light rays bend toward the mass following <strong>Fermat's principle</strong> (just like
+                    light bends in a glass lens). The radial speed is <span class="eq">c_r = c(1 - r_s/r)</span>
+                    and the tangential speed is <span class="eq">c_t = c&radic;(1 - r_s/r)</span>.
+                </p>
+                <p>
+                    At the <strong>photon sphere</strong> (1.5 r_s), photons orbit the mass. At the
+                    <strong>event horizon</strong> (r_s), the effective speed drops to zero &mdash; light
+                    cannot escape.
+                </p>
+            </div>
+
+            <!-- Shortcuts -->
+            <div class="shortcuts">
+                <kbd>F</kbd> Fire ray &nbsp;&nbsp;
+                <kbd>C</kbd> Clear rays &nbsp;&nbsp;
+                Mouse: orbit / zoom / inspect
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
