@@ -172,3 +172,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Local proposal drafts: keep only the final Unitary Fund version in git
+applications/*
+!applications/unitary_fund_FINAL.md
